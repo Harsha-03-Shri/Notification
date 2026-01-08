@@ -20,7 +20,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./DB:/scripts
+      - ./DB/:/scripts
     environment:
       - CQLSH_HOST=cassandra
       - CQLSH_PORT=9042
@@ -101,6 +101,7 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic fcm --partitions 3 --replication-factor 2
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic email --partitions 3 --replication-factor 2
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic apn --partitions 3 --replication-factor 2
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic dlq --partitions 3 --replication-factor 2
       echo 'Kafka topics created';
       "
 
