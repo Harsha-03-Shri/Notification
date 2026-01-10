@@ -7,6 +7,9 @@ services:
       - "9042:9042"
     networks:
       - app-net
+    volumes:
+      - ${PWD}/DB/cql_scripts:/app
+      - ${PWD}/DB/volume:/var/lib/cassandra
     healthcheck:
       test: ["CMD-SHELL", "nodetool status"]
       interval: 10s
@@ -19,8 +22,6 @@ services:
     depends_on:
       cassandra:
         condition: service_healthy
-    volumes:
-      - ./DB/:/scripts
     environment:
       - CQLSH_HOST=cassandra
       - CQLSH_PORT=9042
@@ -53,7 +54,7 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
 
     volumes:
-      - ./MessageQueue/kafka1:/var/lib/kafka/data
+      - ${PWD}/MessageQueue/kafka1:/var/lib/kafka/data
     networks:
       - app-net
 
@@ -82,7 +83,7 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
 
     volumes:
-      - ./MessageQueue/kafka2:/var/lib/kafka/data
+      - ${PWD}/MessageQueue/kafka2:/var/lib/kafka/data
     networks:
       - app-net
 
