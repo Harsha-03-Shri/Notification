@@ -39,6 +39,8 @@ VALUES ('u2', 'Bob', 'bob@example.com', 'apn_token_bob');
 INSERT INTO users (id, name, email, device_token)
 VALUES ('u3', 'Charlie', 'charlie@example.com', 'fcm_token_charlie');
 
+INSERT INTO users (id, name, email, device_token) VALUES ('u4', 'Harsha', 'shrih814@gmail.com', 'fcm_token_harsha');
+
 -- =========================
 -- INSERT TEMPLATES
 -- =========================
@@ -59,3 +61,14 @@ VALUES (
     'ASSIGNMENT_SUBMITTED',
     'Hi {name}, your assignment has been submitted successfully.'
 );
+
+-- =========================
+-- FAILURES TABLES
+-- =========================
+
+CREATE TABLE IF NOT EXISTS failure_dlq (
+    failure_type TEXT,
+    event_timestamp TIMESTAMP,
+    error_log TEXT,
+    PRIMARY KEY (failure_type, event_timestamp)
+) WITH CLUSTERING ORDER BY (event_timestamp DESC);

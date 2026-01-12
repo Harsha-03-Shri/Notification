@@ -29,7 +29,8 @@ async def payment_success(user_id: str):
     payload = {
         "email": user["email"],
         "device_token": user["device_token"],
-        "message": template.format(name=user["name"])
+        "message": template.format(name=user["name"]),
+        "failure_type":[]
     }
 
     await kafka.send_email(payload)
@@ -50,7 +51,8 @@ async def course_completed(user_id: str):
     payload = {
         "email": user["email"],
         "device_token": user["device_token"],
-        "message": template.format(name=user["name"])
+        "message": template.format(name=user["name"]),
+        "failure_type":[]
     }
 
     await kafka.send_email(payload)
@@ -71,7 +73,8 @@ async def assignment_submitted(user_id: str):
     payload = {
         "email": user["email"],
         "device_token": user["device_token"],
-        "message": template.format(name=user["name"])
+        "message": template.format(name=user["name"]),
+        "failure_type":[]
     }
 
     await kafka.send_email(payload)

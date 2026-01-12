@@ -1,4 +1,5 @@
-async def send_apn(payload: dict):
+from producer.dlq import DlqProducer 
+async def send_apn(payload: dict,producer: DlqProducer):
     token = payload["device_token"]
     message = payload["message"]
 

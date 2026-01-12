@@ -1,2 +1,5 @@
 aiokafka
 python-dotenv
+aiosmtplib
+cassandra-driver
+email_validator
