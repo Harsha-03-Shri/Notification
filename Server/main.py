@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from services.DB import CassandraService
 from services.Kafka import AsyncKafkaProducerService
+import asyncio 
 
 app = FastAPI()
 
@@ -10,12 +11,26 @@ kafka = AsyncKafkaProducerService()
 
 @app.on_event("startup")
 async def startup():
+    db.connect()
     await kafka.start()
 
 
 @app.on_event("shutdown")
 async def shutdown():
     await kafka.stop()
+
+@app.post("/addUser")
+async def add_user(user_info: dict):
+    success = db.push_user(user_info)
+
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to add user"
+        )
+
+    logging.info("Successfully pushed data into DB")
+    return {"status": "user added successfully"}
 
 
 @app.post("/notify/payment-success")
@@ -33,9 +48,7 @@ async def payment_success(user_id: str):
         "failure_type":[]
     }
 
-    await kafka.send_email(payload)
-    await kafka.send_apn(payload)
-    await kafka.send_fcm(payload)
+    await send_function(payload)
 
     return {"status": "payment success notification sent"}
 
@@ -55,9 +68,8 @@ async def course_completed(user_id: str):
         "failure_type":[]
     }
 
-    await kafka.send_email(payload)
-    await kafka.send_apn(payload)
-    await kafka.send_fcm(payload)
+    await send_function(payload)
+
 
     return {"status": "course completion notification sent"}
 
@@ -77,6 +89,17 @@ async def assignment_submitted(user_id: str):
         "failure_type":[]
     }
 
-    await kafka.send_email(payload)
+    await send_function(payload)
 
     return {"status": "assignment submitted notification sent"}
+
+
+async def send_function(payload: dict):
+    try:
+            await asyncio.gather(
+        kafka.send_email(payload),
+        kafka.send_apn(payload),
+        kafka.send_fcm(payload)
+    )
+    except Exception as e:
+        logging.error(f"Error while sending the notifications:{e}")

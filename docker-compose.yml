@@ -1,6 +1,6 @@
 services:
   cassandra:
-    image: cassandra:latest
+    image: cassandra:4.1
     container_name: cassandra
     hostname: cassandra
     ports:
@@ -8,8 +8,8 @@ services:
     networks:
       - app-net
     volumes:
-      - ${PWD}/DB/cql_scripts:/app
-      - ${PWD}/DB/volume:/var/lib/cassandra
+      - ./DB/volume:/var/lib/cassandra
+      - ./DB/cql_scripts:/cql
     healthcheck:
       test: ["CMD-SHELL", "nodetool status"]
       interval: 10s
@@ -22,70 +22,72 @@ services:
     depends_on:
       cassandra:
         condition: service_healthy
-    environment:
-      - CQLSH_HOST=cassandra
-      - CQLSH_PORT=9042
-      - CQLVERSION=3.4.7
     networks:
       - app-net
+    volumes:
+      - ./DB/cql_scripts:/scripts
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      sleep 5;
+      for file in /scripts/*.cql; do
+        echo Running $file;
+        cqlsh cassandra 9042 -f $file;
+      done
+      echo 'Cassandra schema initialized';
+      "
 
   kafka1:
     image: apache/kafka:latest
     container_name: kafka1
     hostname: kafka1
-    ports:
-      - "29092:29092"
-    environment:
-      - KAFKA_NODE_ID=1
-      - KAFKA_PROCESS_ROLES=broker,controller
-
-      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:29092
-
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_CLIENT_LISTENER_NAME=EXTERNAL
-
-      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093
-
-      - CLUSTER_ID=MkU3OEVBNTcwNTJDRDRCMz
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=2
-      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
-
-    volumes:
-      - ${PWD}/MessageQueue/kafka1:/var/lib/kafka/data
     networks:
       - app-net
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_LISTENERS: PLAINTEXT://kafka1:9092,CONTROLLER://kafka1:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+
+      CLUSTER_ID: MkU3OEVBNTcwNTJDRDRCMz
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - ./MessageQueue/kafka1:/var/lib/kafka/data
 
   kafka2:
     image: apache/kafka:latest
     container_name: kafka2
     hostname: kafka2
-    ports:
-      - "29093:29093"
-    environment:
-      - KAFKA_NODE_ID=2
-      - KAFKA_PROCESS_ROLES=broker,controller
-
-      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29093,CONTROLLER://0.0.0.0:9093
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://localhost:29093
-
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_CLIENT_LISTENER_NAME=EXTERNAL
-
-      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093
-
-      - CLUSTER_ID=MkU3OEVBNTcwNTJDRDRCMz
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=2
-      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
-
-    volumes:
-      - ${PWD}/MessageQueue/kafka2:/var/lib/kafka/data
     networks:
       - app-net
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_LISTENERS: PLAINTEXT://kafka2:9092,CONTROLLER://kafka2:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+
+      CLUSTER_ID: MkU3OEVBNTcwNTJDRDRCMz
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - ./MessageQueue/kafka2:/var/lib/kafka/data
 
   kafka-init:
     image: apache/kafka:latest
@@ -98,13 +100,58 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: |
       "
-      sleep 25;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic fcm --partitions 3 --replication-factor 2
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic email --partitions 3 --replication-factor 2
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic apn --partitions 3 --replication-factor 2
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic dlq --partitions 3 --replication-factor 2
+      sleep 30;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic fcm --partitions 3 --replication-factor 2;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic email --partitions 3 --replication-factor 2;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic apn --partitions 3 --replication-factor 2;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists --topic dlq --partitions 3 --replication-factor 2;
       echo 'Kafka topics created';
       "
+
+  api-server:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    container_name: notification-api
+    hostname: notification-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_PORT: 9042
+      KAFKA_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092
+    networks:
+      - app-net
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0
+      --port 8000
+
+  notification-worker:
+    build:
+      context: ./Worker
+      dockerfile: Dockerfile
+    container_name: notification-worker
+    hostname: notification-worker
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_PORT: 9042
+      KAFKA_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092
+    env_file:
+      - ./.env
+    networks:
+      - app-net
+    restart: always
 
 networks:
   app-net:

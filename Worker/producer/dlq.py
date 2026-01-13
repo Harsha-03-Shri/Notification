@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 class DlqProducer:
     def __init__(self):
-        self.bootstrap_servers = "localhost:29092"
+        self.bootstrap_servers = "kafka1:9092"
         self.producer = None
         self.db = CassandraService()
 
