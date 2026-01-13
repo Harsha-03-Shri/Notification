@@ -2,12 +2,21 @@ from fastapi import FastAPI, HTTPException
 from services.DB import CassandraService
 from services.Kafka import AsyncKafkaProducerService
 import asyncio 
+from pydantic import BaseModel,EmailStr
+from typing import Optional
+from uuid import UUID
+import logging
 
 app = FastAPI()
 
 db = CassandraService()
 kafka = AsyncKafkaProducerService()
 
+
+class User(BaseModel):
+    name: str
+    email: str
+    device_token: Optional[str] = None
 
 @app.on_event("startup")
 async def startup():
@@ -20,7 +29,7 @@ async def shutdown():
     await kafka.stop()
 
 @app.post("/addUser")
-async def add_user(user_info: dict):
+async def add_user(user_info: User):
     success = db.push_user(user_info)
 
     if not success:
@@ -34,7 +43,7 @@ async def add_user(user_info: dict):
 
 
 @app.post("/notify/payment-success")
-async def payment_success(user_id: str):
+async def payment_success(user_id: UUID):
     user = db.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -54,7 +63,7 @@ async def payment_success(user_id: str):
 
 
 @app.post("/notify/course-completed")
-async def course_completed(user_id: str):
+async def course_completed(user_id: UUID):
     user = db.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -75,7 +84,7 @@ async def course_completed(user_id: str):
 
 
 @app.post("/notify/assignment-submitted")
-async def assignment_submitted(user_id: str):
+async def assignment_submitted(user_id: UUID):
     user = db.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

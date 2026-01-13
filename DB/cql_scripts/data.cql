@@ -13,7 +13,7 @@ USE notification;
 -- USERS TABLE
 -- =========================
 CREATE TABLE IF NOT EXISTS users (
-    id text PRIMARY KEY,
+    id UUID PRIMARY KEY,
     name text,
     email text,
     device_token text

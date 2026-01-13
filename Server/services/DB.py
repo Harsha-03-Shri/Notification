@@ -2,6 +2,7 @@ from cassandra.cluster import Cluster
 import os
 import time
 import logging
+from uuid import UUID, uuid4
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,7 +28,7 @@ class CassandraService:
 
         raise Exception("Failed to connect to Cassandra")
 
-    def get_user(self, user_id: str):
+    def get_user(self, user_id: UUID):
         query = "SELECT id, name, email, device_token FROM users WHERE id=%s"
         row = self.session.execute(query, (user_id,)).one()
 
@@ -46,23 +47,29 @@ class CassandraService:
         row = self.session.execute(query, (event_type,)).one()
         return row.template if row else ""
 
-    def push_user(self, user_info: dict):
-        query = """
-            INSERT INTO users (id, name, email, device_token)
-            VALUES (%s, %s, %s, %s)
-        """
-
+    def push_user(self, user_info: 'User') -> bool:
+        from cassandra.query import SimpleStatement
         try:
+            query = """
+                INSERT INTO users (id, name, email, device_token)
+                VALUES (%s, %s, %s, %s)
+            """
+
+            user_id = uuid4()  
+        
             self.session.execute(
                 query,
                 (
-                    user_info["id"],
-                    user_info["name"],
-                    user_info["email"],
-                    user_info["device_token"],
+                    user_id,
+                    user_info.name,
+                    user_info.email,
+                    user_info.device_token
                 )
             )
+            logging.info(f"Inserted user {user_id} successfully")
             return True
+
         except Exception as e:
-            logging.error(f"Failed to insert user {user_info.get('id')}: {e}")
+            logging.error(f"Failed to insert user {user_info}: {e}")
             return False
+
