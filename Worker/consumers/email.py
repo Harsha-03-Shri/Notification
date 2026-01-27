@@ -17,7 +17,7 @@ gmail_addr = os.getenv("GMAIL_FROM")
 gmail_pwsd = os.getenv("GMAIL_PASSWORD")
 
 
-ALLOWED_DOMAINS = {"gmail.com", "yahoo.com", "outlook.com"}
+ALLOWED_DOMAINS = {"gmail.com", "yahoo.com", "outlook.com", "iiitdwd.ac.in"}
 
 def validate_email_address(email: str) -> bool:
     domain = email.split("@")[-1].lower()

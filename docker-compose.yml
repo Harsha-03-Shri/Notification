@@ -17,7 +17,7 @@ services:
       retries: 10
 
   cqlsh-init:
-    image: nuvo/docker-cqlsh
+    image: cassandra:4.1
     container_name: cqlsh-init
     depends_on:
       cassandra:
@@ -26,16 +26,16 @@ services:
       - app-net
     volumes:
       - ./DB/cql_scripts:/scripts
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      "
-      sleep 5;
-      for file in /scripts/*.cql; do
-        echo Running $file;
-        cqlsh cassandra 9042 -f $file;
-      done
-      echo 'Cassandra schema initialized';
-      "
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        sleep 10
+        for file in /scripts/*.cql; do
+          echo "Running $$file"
+          cqlsh -u cassandra -p cassandra cassandra 9042 -f "$$file"
+        done
+        echo 'Cassandra schema initialized'
 
   kafka1:
     image: apache/kafka:latest
@@ -125,6 +125,10 @@ services:
       CASSANDRA_HOST: cassandra
       CASSANDRA_PORT: 9042
       KAFKA_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092
+
+    env_file:
+      - ./.env
+
     networks:
       - app-net
     command: >
