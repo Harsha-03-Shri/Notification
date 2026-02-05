@@ -157,6 +157,18 @@ services:
       - app-net
     restart: always
 
+  mailhog:                
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app-net
+
+  
 networks:
   app-net:
     name: notification-network
+
+
